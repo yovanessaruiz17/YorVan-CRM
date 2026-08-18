@@ -20,6 +20,7 @@ import {
   Server,
   Zap,
   Layers,
+  ExternalLink,
 } from "lucide-react";
 import { useCRM } from "../../context/CRMContext";
 import { useAuth } from "../../context/AuthContext";
@@ -401,6 +402,27 @@ export const SettingsView: React.FC = () => {
             >
               Guardar Cambios
             </button>
+          </div>
+
+          {/* Software Ownership & License Card */}
+          <div className="mt-8 pt-6 border-t border-slate-200/80">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h4 className="text-xs font-bold text-slate-900">Derechos Reservados y Propiedad del Software</h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Esta plataforma y sus componentes son desarrollados y propiedad intelectual de <strong>Yordev</strong>.
+                </p>
+              </div>
+              <a
+                href="https://yordevctg17.netlify.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors shrink-0"
+              >
+                <span>Visitar Yordev</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
           </div>
         </form>
       )}

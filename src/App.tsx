@@ -163,6 +163,22 @@ const CRMAppContent: React.FC = () => {
           {currentSection === "audit" && <AuditLogsView />}
 
           {currentSection === "settings" && <SettingsView />}
+
+          {/* Global Footer with Copyright & Ownership */}
+          <footer className="pt-8 pb-4 text-center border-t border-slate-200/80 mt-10">
+            <p className="text-xs text-slate-500 flex items-center justify-center gap-1.5 flex-wrap">
+              <span>© {new Date().getFullYear()} YORVAR CRM. Todos los derechos reservados y propiedad de</span>
+              <a
+                href="https://yordevctg17.netlify.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors inline-flex items-center gap-0.5"
+              >
+                <span>Yordev</span>
+                <span className="text-[10px]">↗</span>
+              </a>
+            </p>
+          </footer>
         </main>
       </div>
 

@@ -224,4 +224,6 @@ yorvar-crm/
 
 ## 🛡️ Licencia y Propiedad
 
-Desarrollado para **YORVAR CRM Solutions**. Todos los derechos reservados.
+Todos los derechos reservados y propiedad intelectual de **[Yordev](https://yordevctg17.netlify.app/)**.
+
+Sitio oficial y portafolio: [https://yordevctg17.netlify.app/](https://yordevctg17.netlify.app/)

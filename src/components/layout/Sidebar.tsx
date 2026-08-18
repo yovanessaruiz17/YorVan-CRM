@@ -19,6 +19,7 @@ import {
   Settings,
   Sparkles,
   ChevronRight,
+  ExternalLink,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useCRM } from "../../context/CRMContext";
@@ -289,8 +290,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </div>
 
-        {/* User Footer Profile */}
-        <div className="p-3 border-t border-slate-800/80 bg-slate-950/40">
+        {/* User Footer Profile & Copyright */}
+        <div className="p-3 border-t border-slate-800/80 bg-slate-950/40 space-y-2">
           <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-800/50 border border-slate-700/50">
             <img
               src={currentUser.avatar}
@@ -305,6 +306,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <RoleBadge role={currentUser.role} />
               </div>
             </div>
+          </div>
+
+          <div className="text-center pt-1">
+            <a
+              href="https://yordevctg17.netlify.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1 text-[10px] text-slate-400 hover:text-indigo-300 transition-colors font-medium hover:underline"
+              title="Visitar sitio de Yordev"
+            >
+              <span>© Derechos Reservados Yordev</span>
+              <ExternalLink className="w-2.5 h-2.5 opacity-75" />
+            </a>
           </div>
         </div>
       </aside>
