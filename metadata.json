@@ -1,0 +1,6 @@
+{
+  "name": "YORVAR CRM - Prospección Comercial & Automatización",
+  "description": "CRM comercial integral para prospección, gestión de leads, pipeline Kanban, automatización de emails, secuencias multietapa, scoring, entregabilidad y analítica de ventas con RBAC.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
