@@ -151,14 +151,60 @@ Abre tu navegador e ingresa a:
 - En la barra superior, haz clic en el selector de **Usuario / Rol**.
 - Cambia entre *Yorleidys Navarro (Super Admin)*, *Carlos Mendoza (Vendedor)*, *Valeria Gómez (Gerente)*, etc., para observar cómo la interfaz y los permisos se adaptan automáticamente al perfil seleccionado.
 
-### 6. Conexión a Base de Datos Supabase (Opcional)
-Para sincronizar toda la información con tu base de datos en la nube:
-1. Ve a **Configuración** ⚙️ y selecciona la pestaña **Base de Datos Supabase**.
-2. Haz clic en **Copiar Script SQL de Tablas**.
-3. Pega y ejecuta el script en el **SQL Editor** de tu panel de control de Supabase para crear las tablas (`crm_leads`, `crm_companies`, `crm_contacts`, `crm_opportunities`, etc.).
-4. Ingresa la **URL de Supabase** y la **Anon Public Key**.
-5. Haz clic en **Probar Conexión**.
-6. Usa el botón **Sincronizar Todo (Exportar al Cloud)** para respaldar tus datos locales en PostgreSQL.
+### 6. Conexión a Base de Datos Supabase (PostgreSQL Cloud)
+Para mantener todos los datos centralizados y no depender únicamente de la memoria del navegador (`localStorage`):
+1. **Crear proyecto en Supabase**: Entra a [supabase.com](https://supabase.com/), crea tu cuenta gratuita y crea un nuevo proyecto.
+2. **Obtener credenciales**: Ve a **Project Settings > API** y copia:
+   - **Project URL** (ej: `https://xyzproject.supabase.co`)
+   - **Project API Keys > anon / public** (la clave pública)
+3. **Crear las tablas en Supabase**:
+   - Encontrarás el archivo listo para usar en la raíz del proyecto: **`supabase_schema.sql`** (o en el CRM en **Configuración ⚙️ > Base de Datos Supabase** con el botón *Descargar .sql* o *Copiar Script SQL*).
+   - En tu panel de Supabase, ve a **SQL Editor**, crea una nueva consulta ("New Query"), pega el contenido de `supabase_schema.sql` y presiona **Run**. Esto creará automáticamente todas las tablas necesarias (`crm_leads`, `crm_companies`, `crm_contacts`, `crm_opportunities`, `crm_tasks`, `crm_activities`, `crm_settings`, etc.) con sus índices de rendimiento y políticas RLS.
+4. **Vincular en el CRM**:
+   - Pega tu **URL** y **Anon Key** en la pantalla de Configuración del CRM.
+   - Haz clic en **Probar Conexión**. Verás la confirmación con el tiempo de respuesta (latencia en ms).
+   - Haz clic en **Subir Datos a Supabase** para exportar la base de datos local al servidor PostgreSQL en la nube, o **Descargar Datos de Supabase** si cambiaste de dispositivo.
+
+---
+
+## 🌐 Cómo Subirlo y Probarlo en Netlify
+
+El proyecto ya incluye la configuración lista para Netlify (`netlify.toml` y `public/_redirects` para que el enrutamiento SPA no dé error 404 al recargar).
+
+### Opción A: Despliegue Automático con Git / GitHub (Recomendado)
+1. **Sube tu proyecto a GitHub**:
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit YORVAR CRM"
+   git branch -M main
+   git remote add origin https://github.com/tu-usuario/yorvar-crm.git
+   git push -u origin main
+   ```
+2. **Conecta en Netlify**:
+   - Ingresa a [netlify.com](https://www.netlify.com/) e inicia sesión.
+   - Haz clic en **"Add new site" > "Import an existing project"**.
+   - Selecciona **GitHub** y escoge tu repositorio `yorvar-crm`.
+   - Netlify detectará automáticamente:
+     - **Build command:** `npm run build`
+     - **Publish directory:** `dist`
+3. **Configura las Variables de Entorno en Netlify (Opcional)**:
+   - En la sección **Site configuration > Environment variables**, puedes agregar:
+     - `VITE_SUPABASE_URL`: Tu URL de Supabase.
+     - `VITE_SUPABASE_ANON_KEY`: Tu Anon Key de Supabase.
+4. **Desplegar**:
+   - Presiona **"Deploy yorvar-crm"**. En ~1 minuto tendrás tu enlace activo (ej: `https://yorvar-crm.netlify.app`).
+
+### Opción B: Despliegue Manual Rápido (Netlify Drop)
+Si no deseas usar Git y quieres probarlo de inmediato:
+1. En tu terminal local, compila la aplicación:
+   ```bash
+   npm run build
+   ```
+2. Se generará la carpeta `dist/` en la raíz de tu proyecto.
+3. Entra a [app.netlify.com/drop](https://app.netlify.com/drop).
+4. Arrastra y suelta la carpeta `dist/` directamente en el navegador.
+5. ¡Listo! Netlify creará un enlace público funcional en segundos.
 
 ---
 
@@ -179,6 +225,8 @@ Para sincronizar toda la información con tu base de datos en la nube:
 yorvar-crm/
 ├── metadata.json                # Metadatos de la aplicación
 ├── package.json                 # Dependencias y scripts de ejecución
+├── supabase_schema.sql          # 🗄️ Script SQL con todas las tablas y RLS para Supabase
+├── netlify.toml                 # 🌐 Configuración de despliegue y redirección SPA para Netlify
 ├── server.ts                    # Servidor backend Express con API REST y Gemini Copilot
 ├── index.html                   # Documento HTML principal
 ├── .env.example                 # Plantilla de variables de entorno

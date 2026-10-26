@@ -17,7 +17,7 @@ import { ContactDetailModal } from "./ContactDetailModal";
 import { ContactFormModal } from "./ContactFormModal";
 
 export const ContactsList: React.FC = () => {
-  const { contacts = [], companies = [] } = useCRM();
+  const { contacts = [], companies = [], deleteContact } = useCRM();
   const { hasPermission } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -185,17 +185,36 @@ export const ContactsList: React.FC = () => {
                     </td>
 
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedContactId(null);
-                          setEditingContactId(ct.id);
-                          setIsFormOpen(true);
-                        }}
-                        className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                        {hasPermission("contacts.edit") && (
+                          <button
+                            title="Editar contacto"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedContactId(null);
+                              setEditingContactId(ct.id);
+                              setIsFormOpen(true);
+                            }}
+                            className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {hasPermission("contacts.delete") && (
+                          <button
+                            title="Eliminar contacto"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`¿Estás seguro de eliminar el contacto "${ct.name} ${ct.lastName}"?`)) {
+                                deleteContact(ct.id);
+                              }
+                            }}
+                            className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

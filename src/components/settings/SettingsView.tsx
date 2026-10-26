@@ -21,10 +21,17 @@ import {
   Zap,
   Layers,
   ExternalLink,
+  Download,
+  FileCode,
+  UserPlus,
+  Edit3,
 } from "lucide-react";
 import { useCRM } from "../../context/CRMContext";
 import { useAuth } from "../../context/AuthContext";
+import { User } from "../../types/auth";
 import { UserRole } from "../../types/crm";
+import { RoleBadge } from "../common/Badge";
+import { EmployeeModal } from "../team/EmployeeModal";
 import {
   getStoredSupabaseConfig,
   saveStoredSupabaseConfig,
@@ -37,7 +44,6 @@ import {
 
 export const SettingsView: React.FC = () => {
   const {
-    users = [],
     systemConfig,
     updateSystemConfig,
     leads = [],
@@ -59,11 +65,26 @@ export const SettingsView: React.FC = () => {
     setTasks,
   } = useCRM();
 
-  const { currentUser, switchUser, updateUserRole, hasPermission } = useAuth();
+  const {
+    currentUser,
+    users = [],
+    switchUser,
+    updateUserRole,
+    hasPermission,
+    addUser,
+    updateUser,
+    deleteUser,
+    toggleUserStatus,
+  } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"supabase" | "crm" | "scoring" | "team" | "roles">("supabase");
   const [currency, setCurrency] = useState(systemConfig?.currency || "COP");
   const [companyName, setCompanyName] = useState(systemConfig?.companyName || "YORVAR Corp");
+
+  // Employee Modal state
+  const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+  const [employeeToEdit, setEmployeeToEdit] = useState<User | null>(null);
+  const [employeeSuccessMsg, setEmployeeSuccessMsg] = useState<string | null>(null);
 
   // Supabase State
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>(getStoredSupabaseConfig());
@@ -149,6 +170,18 @@ export const SettingsView: React.FC = () => {
     navigator.clipboard.writeText(generateSupabaseSchemaSQL());
     setCopiedSql(true);
     setTimeout(() => setCopiedSql(false), 2500);
+  };
+
+  const handleDownloadSQL = () => {
+    const blob = new Blob([generateSupabaseSchemaSQL()], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "supabase_schema.sql";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -336,21 +369,37 @@ export const SettingsView: React.FC = () => {
 
           {/* SQL Generator Instructions */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Script SQL para Inicializar Tablas en Supabase</h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Ejecuta este código en el <strong>SQL Editor</strong> de tu panel de Supabase para crear las tablas con RLS.
+                <div className="flex items-center gap-2">
+                  <FileCode className="w-4 h-4 text-emerald-600" />
+                  <h3 className="text-sm font-bold text-slate-900">Script SQL para Inicializar Tablas en Supabase</h3>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  También encuentras este archivo directamente en la raíz de tu proyecto como <code className="px-1.5 py-0.5 rounded bg-slate-100 font-mono text-[11px] text-emerald-700 font-bold">/supabase_schema.sql</code>. Ejecútalo en el <strong>SQL Editor</strong> de Supabase.
                 </p>
               </div>
 
-              <button
-                onClick={handleCopySQL}
-                className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1.5 transition-all"
-              >
-                {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedSql ? "¡Copiado!" : "Copiar Script SQL"}</span>
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleDownloadSQL}
+                  className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center gap-1.5 transition-all border border-emerald-200"
+                  title="Descargar archivo supabase_schema.sql"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Descargar .sql</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopySQL}
+                  className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1.5 transition-all"
+                >
+                  {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedSql ? "¡Copiado!" : "Copiar Script SQL"}</span>
+                </button>
+              </div>
             </div>
 
             <div className="bg-slate-900 text-slate-200 p-4 rounded-xl font-mono text-xs max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700">
@@ -430,10 +479,31 @@ export const SettingsView: React.FC = () => {
       {/* Tab: Team */}
       {activeTab === "team" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-medium">
-              Vendedores, directores y administradores con acceso a la plataforma
-            </span>
+          {employeeSuccessMsg && (
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-between">
+              <span>{employeeSuccessMsg}</span>
+              <button onClick={() => setEmployeeSuccessMsg(null)} className="text-emerald-600 hover:text-emerald-900">✕</button>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="font-bold text-sm text-slate-900">Gestión de Empleados & Credenciales</h3>
+              <p className="text-xs text-slate-500">
+                Usuarios con acceso a la plataforma, roles comerciales y permisos asignados por el Super Administrador
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setEmployeeToEdit(null);
+                setIsEmployeeModalOpen(true);
+              }}
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 transition-colors shrink-0"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>+ Nuevo Empleado</span>
+            </button>
           </div>
 
           <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
@@ -443,54 +513,104 @@ export const SettingsView: React.FC = () => {
                   <th className="py-3 px-4">Usuario</th>
                   <th className="py-3 px-4">Email</th>
                   <th className="py-3 px-4">Rol Asignado</th>
+                  <th className="py-3 px-4">Permisos</th>
                   <th className="py-3 px-4">Estado</th>
-                  <th className="py-3 px-4 text-right">Simular Sesión</th>
+                  <th className="py-3 px-4 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50">
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-slate-200 font-bold text-slate-700 text-xs flex items-center justify-center">
-                          {u.name[0]}
-                          {u.lastName?.[0]}
-                        </div>
-                        <span className="font-bold text-slate-900">
-                          {u.name} {u.lastName}
-                          {u.id === currentUser.id && (
-                            <span className="ml-1.5 text-[10px] text-indigo-600 font-bold">
-                              (Tú)
+                {users.map((u) => {
+                  const isUserAdmin = u.role === "super_admin";
+                  const permCount = u.customPermissions?.length ?? (isUserAdmin ? "Total" : "Rol");
+
+                  return (
+                    <tr key={u.id} className="hover:bg-slate-50">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={u.avatar}
+                            alt={u.name}
+                            className="w-8 h-8 rounded-xl object-cover border border-slate-200 shadow-2xs"
+                          />
+                          <div>
+                            <span className="font-bold text-slate-900 block">
+                              {u.name} {u.lastName}
+                              {u.id === currentUser.id && (
+                                <span className="ml-1.5 text-[10px] text-indigo-600 font-bold">
+                                  (Tú)
+                                </span>
+                              )}
                             </span>
-                          )}
+                            <span className="text-[10px] text-slate-400">{u.jobTitle}</span>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">{u.email}</td>
+
+                      <td className="py-3.5 px-4">
+                        <RoleBadge role={u.role} />
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                          {isUserAdmin ? "Acceso Total" : `${permCount} permisos`}
                         </span>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="py-3.5 px-4 text-slate-600">{u.email}</td>
+                      <td className="py-3.5 px-4">
+                        {u.status === "active" ? (
+                          <span className="flex items-center gap-1 text-emerald-700 font-semibold text-[11px]">
+                            <CheckCircle className="w-3.5 h-3.5" /> Activo
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-rose-700 font-semibold text-[11px]">
+                            <AlertCircle className="w-3.5 h-3.5" /> Inactivo
+                          </span>
+                        )}
+                      </td>
 
-                    <td className="py-3.5 px-4">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-indigo-100 text-indigo-800">
-                        {u.role.replace("_", " ")}
-                      </span>
-                    </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => {
+                              setEmployeeToEdit(u);
+                              setIsEmployeeModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors"
+                            title="Editar usuario y permisos"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
 
-                    <td className="py-3.5 px-4">
-                      <span className="flex items-center gap-1 text-emerald-700 font-semibold text-[11px]">
-                        <CheckCircle className="w-3.5 h-3.5" /> Activo
-                      </span>
-                    </td>
+                          {u.id !== currentUser.id && (
+                            <button
+                              onClick={() => switchUser(u.id)}
+                              className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[10px] transition-colors"
+                              title="Simular sesión con este rol"
+                            >
+                              Simular
+                            </button>
+                          )}
 
-                    <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => switchUser(u.id)}
-                        className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] transition-colors"
-                      >
-                        Cambiar a este Usuario
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                          {!isUserAdmin && (
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`¿Eliminar al empleado ${u.name} ${u.lastName}?`)) {
+                                  deleteUser(u.id);
+                                }
+                              }}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                              title="Eliminar usuario"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -499,57 +619,115 @@ export const SettingsView: React.FC = () => {
 
       {/* Tab: Roles */}
       {activeTab === "roles" && (
-        <div className="p-5 bg-white border border-slate-200/90 rounded-2xl shadow-xs space-y-4 text-xs">
+        <div className="p-6 bg-white border border-slate-200/90 rounded-2xl shadow-xs space-y-4 text-xs">
           <div>
             <h3 className="font-bold text-sm text-slate-900">Matriz de Roles & Permisos (RBAC)</h3>
             <p className="text-slate-500">
-              Permisos del sistema según el rol jerárquico en la organización
+              El Super Administrador define y asigna los permisos de cada colaborador. Al crear un empleado se precargan los permisos de su rol y pueden ajustarse individualmente.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
-              <span className="font-bold text-indigo-700 text-sm block">👑 Administrador</span>
+              <span className="font-bold text-rose-700 text-sm block">👑 Super Administrador</span>
               <p className="text-[11px] text-slate-500">
-                Acceso total irrestricto a prospección, campañas, DNS, reportes, usuarios y configuraciones.
+                Control absoluto irrestricto de toda la plataforma, bases de datos Supabase, auditoría y gestión de empleados.
               </p>
               <ul className="space-y-1 text-[11px] text-slate-700 list-disc pl-4">
-                <li>leads.* (Crear, Editar, Eliminar)</li>
-                <li>opportunities.* (Control total)</li>
-                <li>campaigns.* & Sequences</li>
-                <li>deliverability.* (Warmup & DNS)</li>
-                <li>settings.manage</li>
+                <li>Gestión de Usuarios (Crear, Editar, Borrar)</li>
+                <li>Control total de Leads, Negocios y Contactos</li>
+                <li>Campañas masivas, secuencias y deliverability</li>
+                <li>Configuración del sistema y sincronización Supabase</li>
               </ul>
             </div>
 
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
-              <span className="font-bold text-emerald-700 text-sm block">📊 Director Comercial</span>
+              <span className="font-bold text-purple-700 text-sm block">📊 Gerente Comercial</span>
               <p className="text-[11px] text-slate-500">
-                Supervisión del pipeline, forecast comercial, aprobación de campañas y reasignación de leads.
+                Supervisión del pipeline global, forecast de ingresos, reasignación de prospectos y metas de equipo.
               </p>
               <ul className="space-y-1 text-[11px] text-slate-700 list-disc pl-4">
-                <li>leads.view, leads.create, leads.edit</li>
-                <li>opportunities.manage</li>
-                <li>analytics.view (Forecast global)</li>
-                <li>campaigns.create & templates</li>
+                <li>leads.view, leads.create, leads.assign</li>
+                <li>opportunities.manage & reasignación</li>
+                <li>analytics.view (Forecast global y metas)</li>
+                <li>Supervisión del equipo comercial</li>
               </ul>
             </div>
 
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
-              <span className="font-bold text-amber-700 text-sm block">💼 Vendedor / Ejecutivo</span>
+              <span className="font-bold text-indigo-700 text-sm block">🛠️ Administrador Comercial</span>
               <p className="text-[11px] text-slate-500">
-                Gestión directa de su cartera asignada de prospectos, llamadas, reuniones y cierre de negocios.
+                Operaciones diarias de base de datos comercial, importación masiva, depuración y soporte operativo.
               </p>
               <ul className="space-y-1 text-[11px] text-slate-700 list-disc pl-4">
-                <li>leads.view (Propios) & edit</li>
+                <li>leads.import, leads.edit, leads.delete</li>
+                <li>contacts & companies (Mantenimiento total)</li>
+                <li>opportunities.edit & delete</li>
+                <li>campañas masivas y plantillas</li>
+              </ul>
+            </div>
+
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+              <span className="font-bold text-amber-700 text-sm block">💼 Vendedor / Ejecutivo (AE)</span>
+              <p className="text-[11px] text-slate-500">
+                Gestión directa de prospectos asignados, avance de oportunidades en pipeline, llamadas y tareas comerciales.
+              </p>
+              <ul className="space-y-1 text-[11px] text-slate-700 list-disc pl-4">
+                <li>leads.view (Propios) & leads.edit</li>
                 <li>opportunities.view & update</li>
-                <li>tasks.manage</li>
-                <li>templates.use</li>
+                <li>tasks.manage (Llamadas, reuniones)</li>
+                <li>reports.view (Desempeño personal)</li>
+              </ul>
+            </div>
+
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+              <span className="font-bold text-cyan-700 text-sm block">🎯 SDR / Prospección Outbound</span>
+              <p className="text-[11px] text-slate-500">
+                Generación inicial de prospectos, importación de listas, scoring, cadencias frías y calificación antes del traspaso.
+              </p>
+              <ul className="space-y-1 text-[11px] text-slate-700 list-disc pl-4">
+                <li>leads.create, leads.import, leads.edit</li>
+                <li>contacts.create</li>
+                <li>tasks.manage (Primer contacto y calificación)</li>
+                <li>campaigns.view</li>
+              </ul>
+            </div>
+
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+              <span className="font-bold text-pink-700 text-sm block">📣 Marketing & Automatización</span>
+              <p className="text-[11px] text-slate-500">
+                Diseño y lanzamiento de campañas de email masivo, plantillas de correo, segmentación dinámica y análisis de aperturas.
+              </p>
+              <ul className="space-y-1 text-[11px] text-slate-700 list-disc pl-4">
+                <li>campaigns.* (Crear, Enviar, Eliminar)</li>
+                <li>leads.import & segmentación dinámica</li>
+                <li>reports.view (Métricas de campañas)</li>
               </ul>
             </div>
           </div>
         </div>
       )}
+
+      {/* Employee Modal */}
+      <EmployeeModal
+        isOpen={isEmployeeModalOpen}
+        onClose={() => {
+          setIsEmployeeModalOpen(false);
+          setEmployeeToEdit(null);
+        }}
+        onSave={(data, isEdit, id) => {
+          if (isEdit && id) {
+            updateUser(id, data);
+            setEmployeeSuccessMsg(`Empleado "${data.name} ${data.lastName}" actualizado.`);
+          } else {
+            addUser(data);
+            setEmployeeSuccessMsg(`Nuevo empleado "${data.name} ${data.lastName}" creado con éxito.`);
+          }
+          setTimeout(() => setEmployeeSuccessMsg(null), 4000);
+        }}
+        employeeToEdit={employeeToEdit}
+        existingUsers={users}
+      />
     </div>
   );
 };

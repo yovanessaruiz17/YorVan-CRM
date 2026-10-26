@@ -42,7 +42,7 @@ export const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
     addTask,
     toggleTaskStatus,
   } = useCRM();
-  const { currentUser } = useAuth();
+  const { currentUser, hasPermission } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"info" | "timeline" | "tasks" | "ai">("info");
   const [newNote, setNewNote] = useState("");
@@ -139,13 +139,30 @@ export const OpportunityDetailModal: React.FC<OpportunityDetailModalProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => onEdit(opp.id)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg text-xs font-bold transition-colors"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-            <span>Editar</span>
-          </button>
+          {hasPermission("opportunities.edit") && (
+            <button
+              onClick={() => onEdit(opp.id)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg text-xs font-bold transition-colors"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              <span>Editar</span>
+            </button>
+          )}
+
+          {hasPermission("opportunities.delete") && (
+            <button
+              onClick={() => {
+                if (confirm(`¿Eliminar la oportunidad "${opp.title}" del pipeline?`)) {
+                  deleteOpportunity(opp.id);
+                  onClose();
+                }
+              }}
+              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+              title="Eliminar Oportunidad"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

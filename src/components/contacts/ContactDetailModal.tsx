@@ -26,8 +26,8 @@ export const ContactDetailModal: React.FC<ContactDetailModalProps> = ({
   onClose,
   onEdit,
 }) => {
-  const { contacts, activities, addActivity, opportunities } = useCRM();
-  const { currentUser } = useAuth();
+  const { contacts, activities, addActivity, opportunities, deleteContact } = useCRM();
+  const { currentUser, hasPermission } = useAuth();
   const [note, setNote] = useState("");
 
   const contact = contacts.find((c) => c.id === contactId);
@@ -83,13 +83,31 @@ export const ContactDetailModal: React.FC<ContactDetailModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={() => onEdit(contact.id)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-bold transition-colors"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-            <span>Editar</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {hasPermission("contacts.edit") && (
+              <button
+                onClick={() => onEdit(contact.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-bold transition-colors"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                <span>Editar</span>
+              </button>
+            )}
+            {hasPermission("contacts.delete") && (
+              <button
+                onClick={() => {
+                  if (window.confirm(`¿Estás seguro de eliminar el contacto "${contact.name} ${contact.lastName}"?`)) {
+                    deleteContact(contact.id);
+                    onClose();
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Eliminar</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Contact Details Grid */}

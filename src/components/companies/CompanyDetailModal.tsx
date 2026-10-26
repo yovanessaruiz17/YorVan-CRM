@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Modal } from "../common/Modal";
 import { useCRM } from "../../context/CRMContext";
+import { useAuth } from "../../context/AuthContext";
 import { formatCurrencyCOP } from "../../data/initialConfig";
 
 interface CompanyDetailModalProps {
@@ -29,6 +30,7 @@ export const CompanyDetailModal: React.FC<CompanyDetailModalProps> = ({
   onEdit,
 }) => {
   const { companies, contacts, opportunities, deleteCompany } = useCRM();
+  const { hasPermission } = useAuth();
   const [activeTab, setActiveTab] = useState<"contacts" | "opportunities" | "info">("contacts");
 
   const company = companies.find((c) => c.id === companyId);
@@ -58,13 +60,30 @@ export const CompanyDetailModal: React.FC<CompanyDetailModalProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => onEdit(company.id)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-bold transition-colors"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-            <span>Editar</span>
-          </button>
+          {hasPermission("companies.edit") && (
+            <button
+              onClick={() => onEdit(company.id)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg font-bold transition-colors"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              <span>Editar</span>
+            </button>
+          )}
+
+          {hasPermission("companies.delete") && (
+            <button
+              onClick={() => {
+                if (confirm(`¿Eliminar la empresa "${company.name}" y desvincular sus registros?`)) {
+                  deleteCompany(company.id);
+                  onClose();
+                }
+              }}
+              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+              title="Eliminar Empresa"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

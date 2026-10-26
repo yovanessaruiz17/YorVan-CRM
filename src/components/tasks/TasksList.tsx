@@ -237,21 +237,31 @@ export const TasksList: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    onClick={() => {
-                      setEditingTaskId(t.id);
-                      setIsModalOpen(true);
-                    }}
-                    className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => deleteTask(t.id)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {(hasPermission("tasks.edit") || hasPermission("tasks.create")) && (
+                    <button
+                      title="Editar tarea"
+                      onClick={() => {
+                        setEditingTaskId(t.id);
+                        setIsModalOpen(true);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {(hasPermission("tasks.delete") || currentUser.role === "super_admin" || currentUser.role === "admin_comercial") && (
+                    <button
+                      title="Eliminar tarea"
+                      onClick={() => {
+                        if (window.confirm("¿Seguro que deseas eliminar esta tarea?")) {
+                          deleteTask(t.id);
+                        }
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             );

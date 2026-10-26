@@ -34,6 +34,7 @@ export interface PipelineStage {
 
 export interface Lead {
   id: string;
+  organizationId?: string;
   name: string;
   lastName: string;
   email: string;
@@ -71,6 +72,7 @@ export interface Lead {
 
 export interface Company {
   id: string;
+  organizationId?: string;
   name: string;
   taxId: string; // NIT / RUT / Tax identification
   industry: string;
@@ -93,6 +95,7 @@ export interface Company {
 
 export interface Contact {
   id: string;
+  organizationId?: string;
   name: string;
   lastName: string;
   email: string;
@@ -113,6 +116,7 @@ export interface Contact {
 
 export interface Opportunity {
   id: string;
+  organizationId?: string;
   title: string;
   companyId: string;
   companyName: string;
@@ -150,6 +154,7 @@ export type ActivityType =
 
 export interface Activity {
   id: string;
+  organizationId?: string;
   type: ActivityType;
   title: string;
   description: string;
@@ -183,6 +188,7 @@ export type { UserRole } from "./auth";
 
 export interface Task {
   id: string;
+  organizationId?: string;
   title: string;
   description?: string;
   assignedToUserId: string;

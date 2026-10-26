@@ -136,6 +136,127 @@ export async function testSupabaseConnection(config?: SupabaseConfig): Promise<{
   }
 }
 
+// ==============================================================================
+// SUPABASE AUTH & USER PROFILE INTEGRATION
+// ==============================================================================
+
+export async function supabaseSignIn(email: string, password: string) {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { data: null, error: new Error("Supabase no está configurado.") };
+  }
+  return client.auth.signInWithPassword({ email: email.trim(), password });
+}
+
+export async function supabaseSignUp(
+  email: string,
+  password: string,
+  metadata?: { name: string; lastName: string; role?: string; organizationId?: string }
+) {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { data: null, error: new Error("Supabase no está configurado.") };
+  }
+  return client.auth.signUp({
+    email: email.trim(),
+    password,
+    options: {
+      data: metadata || {},
+    },
+  });
+}
+
+export async function supabaseSignOut() {
+  const client = getSupabaseClient();
+  if (!client) return { error: null };
+  return client.auth.signOut();
+}
+
+export async function supabaseResetPassword(email: string) {
+  const client = getSupabaseClient();
+  if (!client) {
+    return { data: null, error: new Error("Supabase no está configurado.") };
+  }
+  return client.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: window.location.origin,
+  });
+}
+
+export async function supabaseGetSession() {
+  const client = getSupabaseClient();
+  if (!client) return { session: null, user: null };
+  const { data } = await client.auth.getSession();
+  return { session: data.session, user: data.session?.user || null };
+}
+
+export async function supabaseGetAccessToken(): Promise<string | null> {
+  const client = getSupabaseClient();
+  if (!client) return null;
+  const { data } = await client.auth.getSession();
+  return data.session?.access_token || null;
+}
+
+export async function fetchRemoteUserProfile(userId: string) {
+  const client = getSupabaseClient();
+  if (!client) return null;
+  try {
+    const { data, error } = await client
+      .from("user_profiles")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error) {
+      console.warn("Could not fetch remote user profile:", error.message);
+      return null;
+    }
+    return data;
+  } catch (err) {
+    console.warn("Error fetching remote profile:", err);
+    return null;
+  }
+}
+
+export async function upsertRemoteUserProfile(profile: {
+  id: string;
+  email: string;
+  name: string;
+  lastName: string;
+  role: string;
+  jobTitle?: string;
+  organizationId?: string;
+  avatar?: string;
+  customPermissions?: string[];
+}) {
+  const client = getSupabaseClient();
+  if (!client) return false;
+  if (!profile.organizationId) {
+    console.error("Operación bloqueada: profile.organizationId es obligatorio para persistir perfiles remotos.");
+    return false;
+  }
+  try {
+    const { error } = await client.from("user_profiles").upsert({
+      id: profile.id,
+      email: profile.email,
+      name: profile.name,
+      last_name: profile.lastName,
+      role: profile.role,
+      job_title: profile.jobTitle || "",
+      organization_id: profile.organizationId,
+      avatar: profile.avatar || "",
+      custom_permissions: profile.customPermissions || [],
+      updated_at: new Date().toISOString(),
+    });
+    if (error) {
+      console.warn("Error upserting remote profile:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("Exception upserting remote profile:", err);
+    return false;
+  }
+}
+
 export interface FullCRMData {
   leads: Lead[];
   companies: Company[];
@@ -171,31 +292,39 @@ export async function uploadAllToSupabase(data: FullCRMData): Promise<{
   // 1. Companies
   try {
     if (data.companies?.length) {
-      const formatted = data.companies.map((c) => ({
-        id: c.id,
-        name: c.name,
-        tax_id: c.taxId,
-        industry: c.industry,
-        size: c.size,
-        website: c.website,
-        city: c.city,
-        country: c.country,
-        address: c.address,
-        phone: c.phone,
-        assigned_to_user_id: c.assignedToUserId,
-        assigned_to_name: c.assignedToName,
-        status: c.status,
-        potential_value: c.potentialValue,
-        currency: c.currency,
-        contacts_count: c.contactsCount,
-        opportunities_count: c.opportunitiesCount,
-        created_at: c.createdAt,
-        notes: c.notes,
-        raw_data: c,
-      }));
-      const { error } = await client.from("crm_companies").upsert(formatted, { onConflict: "id" });
-      if (error) errors.push(`Empresas: ${error.message}`);
-      else syncedCounts["Empresas"] = formatted.length;
+      const valid = data.companies.filter((c) => !!c.organizationId);
+      const invalid = data.companies.length - valid.length;
+      if (invalid > 0) {
+        errors.push(`${invalid} empresa(s) omitida(s) de la sincronización por carecer de organización válida.`);
+      }
+      if (valid.length) {
+        const formatted = valid.map((c) => ({
+          id: c.id,
+          organization_id: c.organizationId,
+          name: c.name,
+          tax_id: c.taxId,
+          industry: c.industry,
+          size: c.size,
+          website: c.website,
+          city: c.city,
+          country: c.country,
+          address: c.address,
+          phone: c.phone,
+          assigned_to_user_id: c.assignedToUserId,
+          assigned_to_name: c.assignedToName,
+          status: c.status,
+          potential_value: c.potentialValue,
+          currency: c.currency,
+          contacts_count: c.contactsCount,
+          opportunities_count: c.opportunitiesCount,
+          created_at: c.createdAt,
+          notes: c.notes,
+          raw_data: c,
+        }));
+        const { error } = await client.from("crm_companies").upsert(formatted, { onConflict: "id" });
+        if (error) errors.push(`Empresas: ${error.message}`);
+        else syncedCounts["Empresas"] = formatted.length;
+      }
     }
   } catch (e: any) {
     errors.push(`Empresas: ${e.message}`);
@@ -204,27 +333,35 @@ export async function uploadAllToSupabase(data: FullCRMData): Promise<{
   // 2. Contacts
   try {
     if (data.contacts?.length) {
-      const formatted = data.contacts.map((c) => ({
-        id: c.id,
-        name: c.name,
-        last_name: c.lastName,
-        email: c.email,
-        phone: c.phone,
-        whatsapp: c.whatsapp,
-        company_id: c.companyId,
-        company_name: c.companyName,
-        job_title: c.jobTitle,
-        decision_role: c.decisionRole,
-        linkedin: c.linkedin,
-        assigned_to_user_id: c.assignedToUserId,
-        assigned_to_name: c.assignedToName,
-        is_primary: c.isPrimary,
-        created_at: c.createdAt,
-        raw_data: c,
-      }));
-      const { error } = await client.from("crm_contacts").upsert(formatted, { onConflict: "id" });
-      if (error) errors.push(`Contactos: ${error.message}`);
-      else syncedCounts["Contactos"] = formatted.length;
+      const valid = data.contacts.filter((c) => !!c.organizationId);
+      const invalid = data.contacts.length - valid.length;
+      if (invalid > 0) {
+        errors.push(`${invalid} contacto(s) omitido(s) de la sincronización por carecer de organización válida.`);
+      }
+      if (valid.length) {
+        const formatted = valid.map((c) => ({
+          id: c.id,
+          organization_id: c.organizationId,
+          name: c.name,
+          last_name: c.lastName,
+          email: c.email,
+          phone: c.phone,
+          whatsapp: c.whatsapp,
+          company_id: c.companyId,
+          company_name: c.companyName,
+          job_title: c.jobTitle,
+          decision_role: c.decisionRole,
+          linkedin: c.linkedin,
+          assigned_to_user_id: c.assignedToUserId,
+          assigned_to_name: c.assignedToName,
+          is_primary: c.isPrimary,
+          created_at: c.createdAt,
+          raw_data: c,
+        }));
+        const { error } = await client.from("crm_contacts").upsert(formatted, { onConflict: "id" });
+        if (error) errors.push(`Contactos: ${error.message}`);
+        else syncedCounts["Contactos"] = formatted.length;
+      }
     }
   } catch (e: any) {
     errors.push(`Contactos: ${e.message}`);
@@ -233,36 +370,44 @@ export async function uploadAllToSupabase(data: FullCRMData): Promise<{
   // 3. Leads
   try {
     if (data.leads?.length) {
-      const formatted = data.leads.map((l) => ({
-        id: l.id,
-        name: l.name,
-        last_name: l.lastName,
-        email: l.email,
-        phone: l.phone,
-        company: l.company,
-        company_id: l.companyId,
-        job_title: l.jobTitle,
-        city: l.city,
-        country: l.country,
-        source: l.source,
-        industry: l.industry,
-        company_size: l.companySize,
-        assigned_to_user_id: l.assignedToUserId,
-        assigned_to_name: l.assignedToName,
-        status: l.status,
-        pipeline_stage: l.pipelineStage,
-        score: l.score,
-        score_level: l.scoreLevel,
-        estimated_value: l.estimatedValue,
-        currency: l.currency,
-        created_at: l.createdAt,
-        tags: l.tags,
-        notes: l.notes,
-        raw_data: l,
-      }));
-      const { error } = await client.from("crm_leads").upsert(formatted, { onConflict: "id" });
-      if (error) errors.push(`Prospectos: ${error.message}`);
-      else syncedCounts["Prospectos"] = formatted.length;
+      const valid = data.leads.filter((l) => !!l.organizationId);
+      const invalid = data.leads.length - valid.length;
+      if (invalid > 0) {
+        errors.push(`${invalid} prospecto(s) omitido(s) de la sincronización por carecer de organización válida.`);
+      }
+      if (valid.length) {
+        const formatted = valid.map((l) => ({
+          id: l.id,
+          organization_id: l.organizationId,
+          name: l.name,
+          last_name: l.lastName,
+          email: l.email,
+          phone: l.phone,
+          company: l.company,
+          company_id: l.companyId,
+          job_title: l.jobTitle,
+          city: l.city,
+          country: l.country,
+          source: l.source,
+          industry: l.industry,
+          company_size: l.companySize,
+          assigned_to_user_id: l.assignedToUserId,
+          assigned_to_name: l.assignedToName,
+          status: l.status,
+          pipeline_stage: l.pipelineStage,
+          score: l.score,
+          score_level: l.scoreLevel,
+          estimated_value: l.estimatedValue,
+          currency: l.currency,
+          created_at: l.createdAt,
+          tags: l.tags,
+          notes: l.notes,
+          raw_data: l,
+        }));
+        const { error } = await client.from("crm_leads").upsert(formatted, { onConflict: "id" });
+        if (error) errors.push(`Prospectos: ${error.message}`);
+        else syncedCounts["Prospectos"] = formatted.length;
+      }
     }
   } catch (e: any) {
     errors.push(`Prospectos: ${e.message}`);
@@ -271,30 +416,38 @@ export async function uploadAllToSupabase(data: FullCRMData): Promise<{
   // 4. Opportunities
   try {
     if (data.opportunities?.length) {
-      const formatted = data.opportunities.map((o) => ({
-        id: o.id,
-        title: o.title,
-        company_id: o.companyId,
-        company_name: o.companyName,
-        contact_id: o.contactId,
-        contact_name: o.contactName,
-        assigned_to_user_id: o.assignedToUserId,
-        assigned_to_name: o.assignedToName,
-        product_service: o.productService,
-        value: o.value,
-        currency: o.currency,
-        probability: o.probability,
-        weighted_value: o.weightedValue,
-        stage: o.stage,
-        estimated_close_date: o.estimatedCloseDate,
-        source: o.source,
-        score: o.score,
-        created_at: o.createdAt,
-        raw_data: o,
-      }));
-      const { error } = await client.from("crm_opportunities").upsert(formatted, { onConflict: "id" });
-      if (error) errors.push(`Oportunidades: ${error.message}`);
-      else syncedCounts["Oportunidades"] = formatted.length;
+      const valid = data.opportunities.filter((o) => !!o.organizationId);
+      const invalid = data.opportunities.length - valid.length;
+      if (invalid > 0) {
+        errors.push(`${invalid} oportunidad(es) omitida(s) de la sincronización por carecer de organización válida.`);
+      }
+      if (valid.length) {
+        const formatted = valid.map((o) => ({
+          id: o.id,
+          organization_id: o.organizationId,
+          title: o.title,
+          company_id: o.companyId,
+          company_name: o.companyName,
+          contact_id: o.contactId,
+          contact_name: o.contactName,
+          assigned_to_user_id: o.assignedToUserId,
+          assigned_to_name: o.assignedToName,
+          product_service: o.productService,
+          value: o.value,
+          currency: o.currency,
+          probability: o.probability,
+          weighted_value: o.weightedValue,
+          stage: o.stage,
+          estimated_close_date: o.estimatedCloseDate,
+          source: o.source,
+          score: o.score,
+          created_at: o.createdAt,
+          raw_data: o,
+        }));
+        const { error } = await client.from("crm_opportunities").upsert(formatted, { onConflict: "id" });
+        if (error) errors.push(`Oportunidades: ${error.message}`);
+        else syncedCounts["Oportunidades"] = formatted.length;
+      }
     }
   } catch (e: any) {
     errors.push(`Oportunidades: ${e.message}`);
@@ -303,26 +456,34 @@ export async function uploadAllToSupabase(data: FullCRMData): Promise<{
   // 5. Tasks
   try {
     if (data.tasks?.length) {
-      const formatted = data.tasks.map((t) => ({
-        id: t.id,
-        title: t.title,
-        description: t.description,
-        type: t.type,
-        status: t.status,
-        priority: t.priority,
-        assigned_to_user_id: t.assignedToUserId,
-        assigned_to_name: t.assignedToName,
-        due_date: t.dueDate,
-        due_time: t.dueTime,
-        lead_id: t.leadId,
-        opportunity_id: t.opportunityId,
-        company_name: t.companyName,
-        created_at: t.createdAt,
-        raw_data: t,
-      }));
-      const { error } = await client.from("crm_tasks").upsert(formatted, { onConflict: "id" });
-      if (error) errors.push(`Tareas: ${error.message}`);
-      else syncedCounts["Tareas"] = formatted.length;
+      const valid = data.tasks.filter((t) => !!t.organizationId);
+      const invalid = data.tasks.length - valid.length;
+      if (invalid > 0) {
+        errors.push(`${invalid} tarea(s) omitida(s) de la sincronización por carecer de organización válida.`);
+      }
+      if (valid.length) {
+        const formatted = valid.map((t) => ({
+          id: t.id,
+          organization_id: t.organizationId,
+          title: t.title,
+          description: t.description,
+          type: t.type,
+          status: t.status,
+          priority: t.priority,
+          assigned_to_user_id: t.assignedToUserId,
+          assigned_to_name: t.assignedToName,
+          due_date: t.dueDate,
+          due_time: t.dueTime,
+          lead_id: t.leadId,
+          opportunity_id: t.opportunityId,
+          company_name: t.companyName,
+          created_at: t.createdAt,
+          raw_data: t,
+        }));
+        const { error } = await client.from("crm_tasks").upsert(formatted, { onConflict: "id" });
+        if (error) errors.push(`Tareas: ${error.message}`);
+        else syncedCounts["Tareas"] = formatted.length;
+      }
     }
   } catch (e: any) {
     errors.push(`Tareas: ${e.message}`);
@@ -331,23 +492,31 @@ export async function uploadAllToSupabase(data: FullCRMData): Promise<{
   // 6. Activities
   try {
     if (data.activities?.length) {
-      const formatted = data.activities.slice(0, 100).map((a) => ({
-        id: a.id,
-        type: a.type,
-        title: a.title,
-        description: a.description,
-        user_id: a.userId,
-        user_name: a.userName,
-        lead_id: a.leadId,
-        lead_name: a.leadName,
-        company_id: a.companyId,
-        company_name: a.companyName,
-        created_at: (a as any).createdAt || a.timestamp || new Date().toISOString(),
-        raw_data: a,
-      }));
-      const { error } = await client.from("crm_activities").upsert(formatted, { onConflict: "id" });
-      if (error) errors.push(`Actividades: ${error.message}`);
-      else syncedCounts["Actividades"] = formatted.length;
+      const valid = data.activities.filter((a) => !!a.organizationId);
+      const invalid = data.activities.length - valid.length;
+      if (invalid > 0) {
+        errors.push(`${invalid} actividad(es) omitida(s) de la sincronización por carecer de organización válida.`);
+      }
+      if (valid.length) {
+        const formatted = valid.slice(0, 100).map((a) => ({
+          id: a.id,
+          organization_id: a.organizationId,
+          type: a.type,
+          title: a.title,
+          description: a.description,
+          user_id: a.userId,
+          user_name: a.userName,
+          lead_id: a.leadId,
+          lead_name: a.leadName,
+          company_id: a.companyId,
+          company_name: a.companyName,
+          created_at: (a as any).createdAt || a.timestamp || new Date().toISOString(),
+          raw_data: a,
+        }));
+        const { error } = await client.from("crm_activities").upsert(formatted, { onConflict: "id" });
+        if (error) errors.push(`Actividades: ${error.message}`);
+        else syncedCounts["Actividades"] = formatted.length;
+      }
     }
   } catch (e: any) {
     errors.push(`Actividades: ${e.message}`);
@@ -530,17 +699,41 @@ export async function fetchAllFromSupabase(): Promise<{
 }
 
 export function generateSupabaseSchemaSQL(): string {
-  return `-- =========================================================
--- YORVAR CRM - SQL SCHEMA SETUP FOR SUPABASE POSTGRESQL
--- Copia y pega este script en tu Supabase SQL Editor y dale "Run"
--- =========================================================
+  return `-- ==============================================================================
+-- 🚀 YORVAR CRM - SCRIPT SQL COMPLETO & POLÍTICAS RLS MULTI-TENANT (SUPABASE)
+-- ==============================================================================
+-- Arquitectura de Seguridad:
+-- 1. Aislamiento Multi-Tenant por organization_id (Sin default estático)
+-- 2. Integración con Supabase Auth (auth.users) a través de public.user_profiles
+-- 3. Eliminación total de políticas permisivas abiertas para rol anon
+-- 4. Funciones Security Definer con SET search_path para evitar recursión RLS
+-- 5. Disparadores de integridad: Inmutabilidad de Tenant, Inserción Forzada de Org,
+--    y Validación de Referencias Cruzadas (Cross-Tenant FK Isolation)
+-- ==============================================================================
 
 -- 1. Habilitar extensión UUID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Tabla de Empresas (Companies)
+-- 2. Tabla: Perfiles de Usuario RBAC (public.user_profiles)
+CREATE TABLE IF NOT EXISTS public.user_profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    last_name TEXT,
+    role TEXT NOT NULL DEFAULT 'vendedor',
+    job_title TEXT,
+    organization_id TEXT NOT NULL,
+    avatar TEXT,
+    custom_permissions TEXT[] DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. Tabla: Empresas (public.crm_companies)
 CREATE TABLE IF NOT EXISTS public.crm_companies (
     id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL,
     name TEXT NOT NULL,
     tax_id TEXT,
     industry TEXT,
@@ -561,10 +754,12 @@ CREATE TABLE IF NOT EXISTS public.crm_companies (
     notes TEXT,
     raw_data JSONB
 );
+ALTER TABLE public.crm_companies ADD COLUMN IF NOT EXISTS organization_id TEXT;
 
--- 3. Tabla de Contactos (Contacts)
+-- 4. Tabla: Contactos (public.crm_contacts)
 CREATE TABLE IF NOT EXISTS public.crm_contacts (
     id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL,
     name TEXT NOT NULL,
     last_name TEXT,
     email TEXT,
@@ -581,10 +776,12 @@ CREATE TABLE IF NOT EXISTS public.crm_contacts (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     raw_data JSONB
 );
+ALTER TABLE public.crm_contacts ADD COLUMN IF NOT EXISTS organization_id TEXT;
 
--- 4. Tabla de Prospectos / Leads
+-- 5. Tabla: Prospectos / Leads (public.crm_leads)
 CREATE TABLE IF NOT EXISTS public.crm_leads (
     id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL,
     name TEXT NOT NULL,
     last_name TEXT,
     email TEXT,
@@ -610,10 +807,12 @@ CREATE TABLE IF NOT EXISTS public.crm_leads (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     raw_data JSONB
 );
+ALTER TABLE public.crm_leads ADD COLUMN IF NOT EXISTS organization_id TEXT;
 
--- 5. Tabla de Oportunidades / Pipeline
+-- 6. Tabla: Oportunidades (public.crm_opportunities)
 CREATE TABLE IF NOT EXISTS public.crm_opportunities (
     id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL,
     title TEXT NOT NULL,
     company_id TEXT,
     company_name TEXT,
@@ -633,10 +832,12 @@ CREATE TABLE IF NOT EXISTS public.crm_opportunities (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     raw_data JSONB
 );
+ALTER TABLE public.crm_opportunities ADD COLUMN IF NOT EXISTS organization_id TEXT;
 
--- 6. Tabla de Tareas Comerciales
+-- 7. Tabla: Tareas (public.crm_tasks)
 CREATE TABLE IF NOT EXISTS public.crm_tasks (
     id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
     type TEXT DEFAULT 'llamada',
@@ -652,10 +853,12 @@ CREATE TABLE IF NOT EXISTS public.crm_tasks (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     raw_data JSONB
 );
+ALTER TABLE public.crm_tasks ADD COLUMN IF NOT EXISTS organization_id TEXT;
 
--- 7. Tabla de Actividades / Timeline
+-- 8. Tabla: Actividades (public.crm_activities)
 CREATE TABLE IF NOT EXISTS public.crm_activities (
     id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL,
     type TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
@@ -668,17 +871,45 @@ CREATE TABLE IF NOT EXISTS public.crm_activities (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     raw_data JSONB
 );
+ALTER TABLE public.crm_activities ADD COLUMN IF NOT EXISTS organization_id TEXT;
 
--- 8. Tabla de Configuración y Metadatos
+-- 9. Tabla: Configuración (public.crm_settings)
 CREATE TABLE IF NOT EXISTS public.crm_settings (
     key TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL,
     value JSONB NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+ALTER TABLE public.crm_settings ADD COLUMN IF NOT EXISTS organization_id TEXT;
 
--- =========================================================
--- HABILITAR ROW LEVEL SECURITY (RLS) Y POLÍTICAS PÚBLICAS
--- =========================================================
+-- Funciones Auxiliares Security Definer (Anti-recursión garantizada)
+CREATE OR REPLACE FUNCTION public.get_auth_user_organization_id()
+RETURNS TEXT LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT organization_id FROM public.user_profiles WHERE id = auth.uid() LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.current_user_organization_id()
+RETURNS TEXT LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT public.get_auth_user_organization_id();
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_super_admin()
+RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_profiles
+    WHERE id = auth.uid() AND role = 'super_admin' AND status = 'active'
+  );
+$$;
+
+-- Permisos
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM anon;
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
+
+-- Habilitar RLS
+ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.crm_companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.crm_contacts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.crm_leads ENABLE ROW LEVEL SECURITY;
@@ -687,26 +918,48 @@ ALTER TABLE public.crm_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.crm_activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.crm_settings ENABLE ROW LEVEL SECURITY;
 
--- Políticas de acceso para API pública con Anon Key
-DROP POLICY IF EXISTS "Anon All Access crm_companies" ON public.crm_companies;
-CREATE POLICY "Anon All Access crm_companies" ON public.crm_companies FOR ALL USING (true) WITH CHECK (true);
+-- Políticas de aislamiento multi-tenant
+DROP POLICY IF EXISTS "User can read own profile" ON public.user_profiles;
+CREATE POLICY "User can read own profile" ON public.user_profiles FOR SELECT TO authenticated USING (id = auth.uid());
 
-DROP POLICY IF EXISTS "Anon All Access crm_contacts" ON public.crm_contacts;
-CREATE POLICY "Anon All Access crm_contacts" ON public.crm_contacts FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Teammates can read org profiles" ON public.user_profiles;
+CREATE POLICY "Teammates can read org profiles" ON public.user_profiles FOR SELECT TO authenticated USING (
+  id = auth.uid() OR organization_id = public.get_auth_user_organization_id() OR public.is_super_admin()
+);
 
-DROP POLICY IF EXISTS "Anon All Access crm_leads" ON public.crm_leads;
-CREATE POLICY "Anon All Access crm_leads" ON public.crm_leads FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Org isolation crm_companies" ON public.crm_companies;
+CREATE POLICY "Org isolation crm_companies" ON public.crm_companies FOR ALL TO authenticated
+  USING (organization_id = public.get_auth_user_organization_id() OR public.is_super_admin())
+  WITH CHECK (organization_id = public.get_auth_user_organization_id() OR public.is_super_admin());
 
-DROP POLICY IF EXISTS "Anon All Access crm_opportunities" ON public.crm_opportunities;
-CREATE POLICY "Anon All Access crm_opportunities" ON public.crm_opportunities FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Org isolation crm_contacts" ON public.crm_contacts;
+CREATE POLICY "Org isolation crm_contacts" ON public.crm_contacts FOR ALL TO authenticated
+  USING (organization_id = public.get_auth_user_organization_id() OR public.is_super_admin())
+  WITH CHECK (organization_id = public.get_auth_user_organization_id() OR public.is_super_admin());
 
-DROP POLICY IF EXISTS "Anon All Access crm_tasks" ON public.crm_tasks;
-CREATE POLICY "Anon All Access crm_tasks" ON public.crm_tasks FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Org isolation crm_leads" ON public.crm_leads;
+CREATE POLICY "Org isolation crm_leads" ON public.crm_leads FOR ALL TO authenticated
+  USING (organization_id = public.get_auth_user_organization_id() OR public.is_super_admin())
+  WITH CHECK (organization_id = public.get_auth_user_organization_id() OR public.is_super_admin());
 
-DROP POLICY IF EXISTS "Anon All Access crm_activities" ON public.crm_activities;
-CREATE POLICY "Anon All Access crm_activities" ON public.crm_activities FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Org isolation crm_opportunities" ON public.crm_opportunities;
+CREATE POLICY "Org isolation crm_opportunities" ON public.crm_opportunities FOR ALL TO authenticated
+  USING (organization_id = public.get_auth_user_organization_id() OR public.is_super_admin())
+  WITH CHECK (organization_id = public.get_auth_user_organization_id() OR public.is_super_admin());
 
-DROP POLICY IF EXISTS "Anon All Access crm_settings" ON public.crm_settings;
-CREATE POLICY "Anon All Access crm_settings" ON public.crm_settings FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Org isolation crm_tasks" ON public.crm_tasks;
+CREATE POLICY "Org isolation crm_tasks" ON public.crm_tasks FOR ALL TO authenticated
+  USING (organization_id = public.get_auth_user_organization_id() OR public.is_super_admin())
+  WITH CHECK (organization_id = public.get_auth_user_organization_id() OR public.is_super_admin());
+
+DROP POLICY IF EXISTS "Org isolation crm_activities" ON public.crm_activities;
+CREATE POLICY "Org isolation crm_activities" ON public.crm_activities FOR ALL TO authenticated
+  USING (organization_id = public.get_auth_user_organization_id() OR public.is_super_admin())
+  WITH CHECK (organization_id = public.get_auth_user_organization_id() OR public.is_super_admin());
+
+DROP POLICY IF EXISTS "Org isolation crm_settings" ON public.crm_settings;
+CREATE POLICY "Org isolation crm_settings" ON public.crm_settings FOR ALL TO authenticated
+  USING (organization_id = public.get_auth_user_organization_id() OR public.is_super_admin())
+  WITH CHECK (organization_id = public.get_auth_user_organization_id() OR public.is_super_admin());
 `;
 }

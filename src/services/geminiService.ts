@@ -1,3 +1,5 @@
+import { supabaseGetAccessToken } from "./supabaseService";
+
 export interface GenerateAIOptions {
   type: "draft_email" | "summarize_lead" | "next_best_action" | "qualify_lead" | "objection_handling" | "deal_risk_analysis";
   prompt?: string;
@@ -13,10 +15,22 @@ export async function requestAIAssistant(options: GenerateAIOptions): Promise<{
   error?: string;
 }> {
   try {
+    const token = await supabaseGetAccessToken();
+
+    // If no remote authenticated Supabase session exists, execute intelligent client-side fallback directly
+    if (!token) {
+      return {
+        success: true,
+        isFallback: true,
+        result: getClientFallback(options),
+      };
+    }
+
     const response = await fetch("/api/gemini/generate", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
       },
       body: JSON.stringify(options),
     });

@@ -23,11 +23,22 @@ export interface User {
   jobTitle: string;
   avatar: string;
   status: "active" | "inactive";
+  organizationId?: string;
+  authSource?: "supabase" | "demo";
   customPermissions?: string[]; // Overrides or additions to role defaults
   phone?: string;
   dealsWonCount?: number;
   revenueGenerated?: number;
+  monthlyQuota?: number;
   createdAt: string;
+}
+
+export interface AuthSession {
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt?: number;
+  user: User;
+  isDemoMode: boolean;
 }
 
 export interface AuditLog {

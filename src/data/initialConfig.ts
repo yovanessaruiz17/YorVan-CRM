@@ -6,97 +6,189 @@ import { CompanySettings, IntegrationConfig } from "../types/automations";
 export const INITIAL_PERMISSIONS: Permission[] = [
   // Leads
   { id: "leads.view", name: "Ver Leads", category: "leads", description: "Ver lista y detalles de prospectos" },
-  { id: "leads.create", name: "Crear Leads", category: "leads", description: "Crear e importar nuevos prospectos" },
-  { id: "leads.edit", name: "Editar Leads", category: "leads", description: "Modificar información de prospectos" },
+  { id: "leads.create", name: "Crear Leads", category: "leads", description: "Crear nuevos prospectos manualmente" },
+  { id: "leads.import", name: "Importar Leads", category: "leads", description: "Importar prospectos masivos vía CSV/Excel" },
+  { id: "leads.edit", name: "Editar Leads", category: "leads", description: "Modificar información y scoring de prospectos" },
   { id: "leads.delete", name: "Eliminar Leads", category: "leads", description: "Eliminar prospectos permanentemente" },
-  { id: "leads.assign", name: "Asignar Leads", category: "leads", description: "Transferir prospectos a otros usuarios" },
+  { id: "leads.assign", name: "Asignar Leads", category: "leads", description: "Transferir prospectos a otros vendedores" },
   
   // Contacts & Companies
   { id: "contacts.view", name: "Ver Contactos", category: "contacts", description: "Consultar directorio de contactos" },
-  { id: "contacts.edit", name: "Editar Contactos", category: "contacts", description: "Crear y editar contactos comerciales" },
+  { id: "contacts.create", name: "Crear Contactos", category: "contacts", description: "Registrar nuevos contactos comerciales" },
+  { id: "contacts.edit", name: "Editar Contactos", category: "contacts", description: "Modificar datos de contactos comerciales" },
+  { id: "contacts.delete", name: "Eliminar Contactos", category: "contacts", description: "Eliminar contactos del directorio" },
   { id: "companies.view", name: "Ver Empresas", category: "companies", description: "Consultar directorio de cuentas/empresas" },
-  { id: "companies.edit", name: "Editar Empresas", category: "companies", description: "Crear y modificar datos de empresas" },
+  { id: "companies.create", name: "Crear Empresas", category: "companies", description: "Registrar nuevas cuentas corporativas" },
+  { id: "companies.edit", name: "Editar Empresas", category: "companies", description: "Modificar datos de cuentas/empresas" },
+  { id: "companies.delete", name: "Eliminar Empresas", category: "companies", description: "Eliminar empresas y sus registros" },
 
   // Opportunities & Pipeline
   { id: "opportunities.view", name: "Ver Oportunidades", category: "opportunities", description: "Visualizar pipeline y negocios" },
   { id: "opportunities.create", name: "Crear Oportunidades", category: "opportunities", description: "Abrir nuevos negocios comerciales" },
-  { id: "opportunities.edit", name: "Editar Oportunidades", category: "opportunities", description: "Mover etapas, cambiar montos" },
+  { id: "opportunities.edit", name: "Editar Oportunidades", category: "opportunities", description: "Mover etapas, cambiar montos y probabilidades" },
   { id: "opportunities.delete", name: "Eliminar Oportunidades", category: "opportunities", description: "Borrar negocios del pipeline" },
-  { id: "opportunities.assign", name: "Reasignar Negocios", category: "opportunities", description: "Cambiar ejecutivo responsable" },
+  { id: "opportunities.assign", name: "Reasignar Negocios", category: "opportunities", description: "Cambiar ejecutivo comercial asignado" },
 
   // Tasks
   { id: "tasks.view", name: "Ver Tareas", category: "tasks", description: "Consultar tareas propias y asignadas" },
   { id: "tasks.create", name: "Crear Tareas", category: "tasks", description: "Generar llamadas, reuniones y seguimientos" },
-  { id: "tasks.assign", name: "Asignar Tareas", category: "tasks", description: "Delegar tareas a miembros del equipo" },
+  { id: "tasks.edit", name: "Editar Tareas", category: "tasks", description: "Editar compromisos y cambiar estado" },
+  { id: "tasks.delete", name: "Eliminar Tareas", category: "tasks", description: "Borrar tareas y compromisos" },
+  { id: "tasks.assign", name: "Asignar Tareas", category: "tasks", description: "Delegar tareas a otros miembros del equipo" },
 
   // Campaigns & Email
   { id: "campaigns.view", name: "Ver Campañas", category: "campaigns", description: "Consultar campañas y métricas" },
   { id: "campaigns.create", name: "Crear Campañas", category: "campaigns", description: "Diseñar nuevas campañas y secuencias" },
-  { id: "campaigns.send", name: "Lanzar Envíos", category: "campaigns", description: "Ejecutar envíos masivos y secuencias" },
+  { id: "campaigns.send", name: "Lanzar Envíos", category: "campaigns", description: "Ejecutar envíos masivos y secuencias automáticas" },
   { id: "campaigns.delete", name: "Eliminar Campañas", category: "campaigns", description: "Borrar plantillas y campañas" },
 
   // Reports
-  { id: "reports.view", name: "Ver Reportes", category: "reports", description: "Consultar analítica comercial y forecasts" },
+  { id: "reports.view", name: "Ver Reportes", category: "reports", description: "Consultar analítica comercial, forecasts y cuotas" },
 
   // Users & Settings
-  { id: "users.view", name: "Ver Usuarios", category: "users", description: "Ver lista del equipo comercial" },
-  { id: "users.create", name: "Crear Usuarios", category: "users", description: "Dar de alta nuevos usuarios" },
-  { id: "users.edit", name: "Editar Usuarios", category: "users", description: "Modificar roles y permisos" },
-  { id: "users.delete", name: "Eliminar Usuarios", category: "users", description: "Desactivar o borrar usuarios" },
-  { id: "settings.view", name: "Ver Configuración", category: "settings", description: "Ver ajustes generales del CRM" },
-  { id: "settings.edit", name: "Modificar Configuración", category: "settings", description: "Editar reglas, integraciones y deliverability" },
+  { id: "users.view", name: "Ver Usuarios", category: "users", description: "Ver lista del equipo comercial y metas" },
+  { id: "users.create", name: "Crear Usuarios", category: "users", description: "Dar de alta nuevos usuarios en la plataforma" },
+  { id: "users.edit", name: "Editar Usuarios", category: "users", description: "Modificar roles, metas y permisos" },
+  { id: "users.delete", name: "Eliminar Usuarios", category: "users", description: "Desactivar o borrar usuarios del sistema" },
+  { id: "settings.view", name: "Ver Configuración", category: "settings", description: "Ver ajustes generales del CRM y base de datos" },
+  { id: "settings.edit", name: "Modificar Configuración", category: "settings", description: "Editar reglas, integraciones, DNS y credenciales" },
 ];
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, string[]> = {
   super_admin: INITIAL_PERMISSIONS.map((p) => p.id),
-  admin_comercial: [
-    "leads.view", "leads.create", "leads.edit", "leads.assign",
-    "contacts.view", "contacts.edit",
-    "companies.view", "companies.edit",
+  gerente_comercial: [
+    "leads.view", "leads.create", "leads.edit", "leads.assign", "leads.import",
+    "contacts.view", "contacts.create", "contacts.edit",
+    "companies.view", "companies.create", "companies.edit",
     "opportunities.view", "opportunities.create", "opportunities.edit", "opportunities.assign",
-    "tasks.view", "tasks.create", "tasks.assign",
-    "campaigns.view", "campaigns.create", "campaigns.send",
+    "tasks.view", "tasks.create", "tasks.edit", "tasks.assign",
+    "campaigns.view",
     "reports.view",
-    "users.view",
+    "users.view", "users.edit",
     "settings.view",
   ],
-  gerente_comercial: [
-    "leads.view", "leads.assign",
-    "contacts.view",
-    "companies.view",
-    "opportunities.view", "opportunities.create", "opportunities.edit", "opportunities.assign",
-    "tasks.view", "tasks.create", "tasks.assign",
+  admin_comercial: [
+    "leads.view", "leads.create", "leads.import", "leads.edit", "leads.delete", "leads.assign",
+    "contacts.view", "contacts.create", "contacts.edit", "contacts.delete",
+    "companies.view", "companies.create", "companies.edit", "companies.delete",
+    "opportunities.view", "opportunities.create", "opportunities.edit", "opportunities.delete", "opportunities.assign",
+    "tasks.view", "tasks.create", "tasks.edit", "tasks.delete", "tasks.assign",
+    "campaigns.view", "campaigns.create", "campaigns.send",
     "reports.view",
     "users.view",
     "settings.view",
   ],
   vendedor: [
     "leads.view", "leads.create", "leads.edit",
-    "contacts.view", "contacts.edit",
-    "companies.view", "companies.edit",
+    "contacts.view", "contacts.create", "contacts.edit",
+    "companies.view", "companies.create", "companies.edit",
     "opportunities.view", "opportunities.create", "opportunities.edit",
-    "tasks.view", "tasks.create",
+    "tasks.view", "tasks.create", "tasks.edit",
     "reports.view",
   ],
   sdr: [
-    "leads.view", "leads.create", "leads.edit", "leads.assign",
-    "contacts.view", "contacts.edit",
+    "leads.view", "leads.create", "leads.import", "leads.edit", "leads.assign",
+    "contacts.view", "contacts.create", "contacts.edit",
     "companies.view",
-    "tasks.view", "tasks.create",
+    "tasks.view", "tasks.create", "tasks.edit",
     "campaigns.view",
   ],
   marketing: [
-    "leads.view",
+    "leads.view", "leads.create", "leads.import",
     "contacts.view",
     "companies.view",
     "campaigns.view", "campaigns.create", "campaigns.send", "campaigns.delete",
     "reports.view",
   ],
   soporte: [
-    "contacts.view", "contacts.edit",
-    "companies.view", "companies.edit",
-    "tasks.view", "tasks.create",
+    "contacts.view", "contacts.create", "contacts.edit",
+    "companies.view",
+    "tasks.view", "tasks.create", "tasks.edit",
   ],
+};
+
+export interface RoleMeta {
+  role: UserRole;
+  title: string;
+  badge: string;
+  color: string;
+  badgeClass: string;
+  description: string;
+  keyPermissions: string[];
+  restrictedActions: string[];
+}
+
+export const ROLE_METADATA: Record<UserRole, RoleMeta> = {
+  super_admin: {
+    role: "super_admin",
+    title: "Super Administrador",
+    badge: "Super Admin",
+    color: "rose",
+    badgeClass: "bg-rose-100 text-rose-800 border-rose-200",
+    description: "Acceso total sin restricciones a toda la plataforma, usuarios, bases de datos y configuraciones.",
+    keyPermissions: ["Control total", "Eliminación global", "Gestión de usuarios y roles", "Ajustes del sistema y Supabase", "Auditoría"],
+    restrictedActions: [],
+  },
+  gerente_comercial: {
+    role: "gerente_comercial",
+    title: "Gerente Comercial",
+    badge: "Gerente",
+    color: "purple",
+    badgeClass: "bg-purple-100 text-purple-800 border-purple-200",
+    description: "Supervisión directiva del pipeline global, cuotas del equipo, reasignación de prospectos y reportes ejecutivos.",
+    keyPermissions: ["Pipeline global", "Reasignación de leads y negocios", "Gestión de cuotas comerciales", "Reportes & Analytics", "Ver equipo"],
+    restrictedActions: ["No puede eliminar registros permanentemente", "No puede editar configuraciones críticas del sistema", "No puede borrar usuarios"],
+  },
+  admin_comercial: {
+    role: "admin_comercial",
+    title: "Administrador Comercial",
+    badge: "Admin Comercial",
+    color: "blue",
+    badgeClass: "bg-blue-100 text-blue-800 border-blue-200",
+    description: "Administración operativa de prospectos, clientes, oportunidades comerciales y campañas del equipo.",
+    keyPermissions: ["Crear, editar y borrar registros", "Asignar leads y tareas", "Lanzar campañas masivas", "Gestión de pipeline", "Importar datos"],
+    restrictedActions: ["No puede modificar cuotas del equipo", "No puede acceder a auditoría de seguridad del sistema"],
+  },
+  vendedor: {
+    role: "vendedor",
+    title: "Vendedor / Account Executive",
+    badge: "Vendedor",
+    color: "emerald",
+    badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    description: "Enfocado en prospección activa, avanzar oportunidades en el pipeline y cierre de negocios comerciales.",
+    keyPermissions: ["Crear y editar prospectos", "Crear y avanzar oportunidades en pipeline", "Registrar contactos y empresas", "Crear tareas y llamadas"],
+    restrictedActions: ["No puede eliminar prospectos ni oportunidades", "No puede reasignar leads a otros compañeros", "No tiene acceso a Configuración", "No puede gestionar usuarios ni auditoría"],
+  },
+  sdr: {
+    role: "sdr",
+    title: "SDR / Prospección Outbound",
+    badge: "SDR",
+    color: "amber",
+    badgeClass: "bg-amber-100 text-amber-800 border-amber-200",
+    description: "Calificación outbound de prospectos, llamadas de descubrimiento y transferencia a vendedores.",
+    keyPermissions: ["Crear e importar prospectos", "Calificación y scoring de leads", "Asignar prospectos calificados", "Agendar tareas y reuniones"],
+    restrictedActions: ["No gestiona oportunidades en el pipeline", "No tiene acceso a reportes financieros de ventas", "No puede eliminar registros", "No tiene acceso a configuración"],
+  },
+  marketing: {
+    role: "marketing",
+    title: "Marketing & Automatización",
+    badge: "Marketing",
+    color: "indigo",
+    badgeClass: "bg-indigo-100 text-indigo-800 border-indigo-200",
+    description: "Diseño y despacho de campañas masivas por email, secuencias automatizadas, entregabilidad y segmentos.",
+    keyPermissions: ["Crear y enviar campañas masivas", "Diseño de secuencias y plantillas", "Entregabilidad DNS y listas", "Segmentos dinámicos"],
+    restrictedActions: ["No accede al pipeline de ventas", "No puede modificar oportunidades comerciales", "No puede gestionar usuarios ni cuotas"],
+  },
+  soporte: {
+    role: "soporte",
+    title: "Soporte & Éxito del Cliente",
+    badge: "Soporte",
+    color: "cyan",
+    badgeClass: "bg-cyan-100 text-cyan-800 border-cyan-200",
+    description: "Atención post-venta, registro de incidencias, directorio de empresas y contactos asignados.",
+    keyPermissions: ["Ver y editar contactos y empresas", "Crear tareas y compromisos de soporte", "Registrar actividades y notas"],
+    restrictedActions: ["Sin acceso a pipeline comercial", "Sin acceso a campañas masivas de marketing", "Sin acceso a analítica financiera", "Sin acceso a configuración"],
+  },
 };
 
 export const INITIAL_PIPELINE_STAGES: PipelineStage[] = [

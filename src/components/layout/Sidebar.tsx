@@ -20,6 +20,7 @@ import {
   Sparkles,
   ChevronRight,
   ExternalLink,
+  LogOut,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useCRM } from "../../context/CRMContext";
@@ -48,6 +49,7 @@ interface SidebarProps {
   currentSection: NavSection;
   onSelectSection: (section: NavSection) => void;
   onOpenAI: () => void;
+  onOpenRolePermissions?: () => void;
   isMobileOpen: boolean;
   onCloseMobile: () => void;
 }
@@ -56,10 +58,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentSection,
   onSelectSection,
   onOpenAI,
+  onOpenRolePermissions,
   isMobileOpen,
   onCloseMobile,
 }) => {
-  const { currentUser, hasPermission } = useAuth();
+  const { currentUser, hasPermission, logout } = useAuth();
   const { leads = [], opportunities = [], tasks = [] } = useCRM();
 
   const hotLeadsCount = (leads || []).filter((l) => l.scoreLevel === "muy_caliente" || l.scoreLevel === "caliente").length;
@@ -292,11 +295,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* User Footer Profile & Copyright */}
         <div className="p-3 border-t border-slate-800/80 bg-slate-950/40 space-y-2">
-          <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-800/50 border border-slate-700/50">
+          <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-800/50 border border-slate-700/50">
             <img
               src={currentUser.avatar}
               alt={currentUser.name}
-              className="w-9 h-9 rounded-lg object-cover border border-slate-600"
+              className="w-9 h-9 rounded-lg object-cover border border-slate-600 shrink-0"
             />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold text-white truncate">
@@ -305,6 +308,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="mt-0.5">
                 <RoleBadge role={currentUser.role} />
               </div>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              {onOpenRolePermissions && (
+                <button
+                  type="button"
+                  onClick={onOpenRolePermissions}
+                  title="Ver permisos de mi rol"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-700/60 transition-colors"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={logout}
+                title="Cerrar sesión"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-700/60 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </div>
 

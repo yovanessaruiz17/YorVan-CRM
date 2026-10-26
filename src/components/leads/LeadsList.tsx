@@ -124,7 +124,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
             <span>Exportar CSV</span>
           </button>
 
-          {hasPermission("leads.import") && (
+          {(hasPermission("leads.import") || hasPermission("leads.create")) && (
             <button
               onClick={onOpenImportModal}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors"
@@ -217,18 +217,20 @@ export const LeadsList: React.FC<LeadsListProps> = ({
             {selectedLeadIds.length} prospectos seleccionados
           </span>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                if (confirm(`¿Deseas eliminar los ${selectedLeadIds.length} prospectos seleccionados?`)) {
-                  selectedLeadIds.forEach((id) => deleteLead(id));
-                  setSelectedLeadIds([]);
-                }
-              }}
-              className="flex items-center gap-1 px-3 py-1 text-xs font-semibold text-rose-700 bg-rose-100 hover:bg-rose-200 rounded-lg transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Eliminar Selección</span>
-            </button>
+            {hasPermission("leads.delete") && (
+              <button
+                onClick={() => {
+                  if (confirm(`¿Deseas eliminar los ${selectedLeadIds.length} prospectos seleccionados?`)) {
+                    selectedLeadIds.forEach((id) => deleteLead(id));
+                    setSelectedLeadIds([]);
+                  }
+                }}
+                className="flex items-center gap-1 px-3 py-1 text-xs font-semibold text-rose-700 bg-rose-100 hover:bg-rose-200 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Eliminar Selección</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -330,7 +332,7 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                       {/* Actions */}
                       <td className="p-3.5 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
-                          {lead.status !== "convertido" && (
+                          {lead.status !== "convertido" && hasPermission("opportunities.create") && (
                             <button
                               onClick={() => convertLeadToOpportunity(lead.id)}
                               title="Convertir a Oportunidad en Pipeline"
@@ -346,6 +348,19 @@ export const LeadsList: React.FC<LeadsListProps> = ({
                           >
                             <ExternalLink className="w-4 h-4" />
                           </button>
+                          {hasPermission("leads.delete") && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`¿Eliminar al prospecto ${lead.name} ${lead.lastName}?`)) {
+                                  deleteLead(lead.id);
+                                }
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+                              title="Eliminar Prospecto"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

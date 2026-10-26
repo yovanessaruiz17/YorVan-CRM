@@ -36,7 +36,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
   onEditLead,
 }) => {
   const { leads, updateLead, deleteLead, activities, addActivity, tasks, addTask, toggleTaskStatus, convertLeadToOpportunity, templates } = useCRM();
-  const { currentUser } = useAuth();
+  const { currentUser, hasPermission } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"info" | "timeline" | "tasks" | "email" | "ai">("info");
 
@@ -199,7 +199,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {lead.status !== "convertido" && (
+          {lead.status !== "convertido" && hasPermission("opportunities.create") && (
             <button
               onClick={() => {
                 convertLeadToOpportunity(lead.id);
@@ -212,13 +212,30 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
             </button>
           )}
 
-          <button
-            onClick={() => onEditLead(lead.id)}
-            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 rounded-lg transition-colors"
-            title="Editar Lead"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
+          {hasPermission("leads.edit") && (
+            <button
+              onClick={() => onEditLead(lead.id)}
+              className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 rounded-lg transition-colors"
+              title="Editar Lead"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+          )}
+
+          {hasPermission("leads.delete") && (
+            <button
+              onClick={() => {
+                if (confirm(`¿Eliminar permanentemente al prospecto ${lead.name} ${lead.lastName}?`)) {
+                  deleteLead(lead.id);
+                  onClose();
+                }
+              }}
+              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+              title="Eliminar Lead"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

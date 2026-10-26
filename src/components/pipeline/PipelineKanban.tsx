@@ -84,11 +84,16 @@ export const PipelineKanban: React.FC = () => {
 
   // Drag Handlers
   const handleDragStart = (e: React.DragEvent, oppId: string) => {
+    if (!hasPermission("opportunities.edit")) {
+      e.preventDefault();
+      return;
+    }
     e.dataTransfer.setData("text/plain", oppId);
     setDraggedOppId(oppId);
   };
 
   const handleDragOver = (e: React.DragEvent, stageId: PipelineStageId) => {
+    if (!hasPermission("opportunities.edit")) return;
     e.preventDefault();
     setDragOverStage(stageId);
   };
@@ -100,6 +105,7 @@ export const PipelineKanban: React.FC = () => {
   const handleDrop = (e: React.DragEvent, stageId: PipelineStageId) => {
     e.preventDefault();
     setDragOverStage(null);
+    if (!hasPermission("opportunities.edit")) return;
     const oppId = e.dataTransfer.getData("text/plain") || draggedOppId;
     if (!oppId) return;
 

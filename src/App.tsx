@@ -39,8 +39,11 @@ import { LeadImportModal } from "./components/leads/LeadImportModal";
 import { OpportunityDetailModal } from "./components/pipeline/OpportunityDetailModal";
 import { OpportunityFormModal } from "./components/pipeline/OpportunityFormModal";
 import { TaskModal } from "./components/tasks/TaskModal";
+import { RolePermissionsModal } from "./components/layout/RolePermissionsModal";
+import { LoginView } from "./components/auth/LoginView";
 
 const CRMAppContent: React.FC = () => {
+  const { isAuthenticated, hasPermission } = useAuth();
   const [currentSection, setCurrentSection] = useState<NavSection>("dashboard");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -49,6 +52,7 @@ const CRMAppContent: React.FC = () => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
+  const [isRolePermissionsOpen, setIsRolePermissionsOpen] = useState(false);
 
   // Entity Modals
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
@@ -62,6 +66,41 @@ const CRMAppContent: React.FC = () => {
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+
+  // Auto-redirect if current section is restricted for user's role
+  React.useEffect(() => {
+    if (!isAuthenticated) return;
+    const sectionPermissions: Partial<Record<NavSection, string>> = {
+      leads: "leads.view",
+      pipeline: "opportunities.view",
+      companies: "companies.view",
+      contacts: "contacts.view",
+      tasks: "tasks.view",
+      campaigns: "campaigns.view",
+      sequences: "campaigns.view",
+      templates: "campaigns.view",
+      deliverability: "settings.view",
+      segments: "leads.view",
+      automations: "settings.view",
+      reports: "reports.view",
+      team: "users.view",
+      audit: "settings.view",
+      settings: "settings.view",
+    };
+
+    const reqPerm = sectionPermissions[currentSection];
+    if (reqPerm && !hasPermission(reqPerm)) {
+      if (hasPermission("leads.view")) setCurrentSection("leads");
+      else if (hasPermission("contacts.view")) setCurrentSection("contacts");
+      else if (hasPermission("tasks.view")) setCurrentSection("tasks");
+      else if (hasPermission("companies.view")) setCurrentSection("companies");
+      else setCurrentSection("dashboard");
+    }
+  }, [currentSection, hasPermission, isAuthenticated]);
+
+  if (!isAuthenticated) {
+    return <LoginView />;
+  }
 
   const handleNavigate = (section: NavSection, entityId?: string) => {
     setCurrentSection(section);
@@ -78,6 +117,7 @@ const CRMAppContent: React.FC = () => {
         currentSection={currentSection}
         onSelectSection={(sec) => setCurrentSection(sec)}
         onOpenAI={() => setIsAIOpen(true)}
+        onOpenRolePermissions={() => setIsRolePermissionsOpen(true)}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
@@ -90,6 +130,7 @@ const CRMAppContent: React.FC = () => {
           onOpenAI={() => setIsAIOpen(true)}
           onOpenNotifications={() => setIsNotificationsOpen(true)}
           onOpenOnboarding={() => setIsOnboardingOpen(true)}
+          onOpenRolePermissions={() => setIsRolePermissionsOpen(true)}
           onOpenNewLead={() => {
             setEditingLeadId(null);
             setIsLeadFormOpen(true);
@@ -204,6 +245,11 @@ const CRMAppContent: React.FC = () => {
       <AICopilotDrawer
         isOpen={isAIOpen}
         onClose={() => setIsAIOpen(false)}
+      />
+
+      <RolePermissionsModal
+        isOpen={isRolePermissionsOpen}
+        onClose={() => setIsRolePermissionsOpen(false)}
       />
 
       {/* Lead Modals */}

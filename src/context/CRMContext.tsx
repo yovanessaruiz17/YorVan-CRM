@@ -290,8 +290,25 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return "frio";
   };
 
+  // Helper to ensure tenant isolation: every mutation must belong to the active user's organization
+  const getActiveTenantId = (): string | null => {
+    const orgId = currentUser?.organizationId?.trim();
+    if (!orgId) {
+      console.error(
+        "[Seguridad Multi-Tenant] Operación bloqueada: El usuario actual no posee una organización asignada en su sesión."
+      );
+      return null;
+    }
+    return orgId;
+  };
+
   // Lead CRUD
   const addLead = (leadData: Omit<Lead, "id" | "createdAt" | "score" | "scoreLevel">) => {
+    const activeOrgId = getActiveTenantId();
+    if (!activeOrgId) {
+      return;
+    }
+
     const baseScore = 20;
     const leadId = `lead-${Date.now()}`;
     const cleanCompany = (leadData.company || "Empresa Sin Nombre").trim();
@@ -318,6 +335,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         companyId = `comp-${Date.now()}`;
         const newCompany: Company = {
           id: companyId,
+          organizationId: activeOrgId,
           name: cleanCompany,
           taxId: "NIT-Pendiente",
           industry: leadData.industry || "General",
@@ -354,6 +372,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       contactId = `cnt-${Date.now()}`;
       const newContact: Contact = {
         id: contactId,
+        organizationId: activeOrgId,
         name: leadData.name,
         lastName: leadData.lastName,
         email: leadData.email,
@@ -378,6 +397,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const oppProb = leadData.pipelineStage === "negociacion" ? 70 : leadData.pipelineStage === "propuesta_enviada" ? 50 : 25;
       const newOpp: Opportunity = {
         id: `opp-${Date.now()}`,
+        organizationId: activeOrgId,
         title: `Negocio - ${cleanCompany}`,
         companyId: companyId || "",
         companyName: cleanCompany,
@@ -403,6 +423,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newLead: Lead = {
       ...leadData,
       id: leadId,
+      organizationId: activeOrgId,
       companyId: companyId || "",
       score: baseScore,
       scoreLevel: calculateScoreLevel(baseScore),
@@ -582,11 +603,15 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const lead = leads.find((l) => l.id === leadId);
     if (!lead) return;
 
+    const activeOrgId = getActiveTenantId() || lead.organizationId;
+    if (!activeOrgId) return;
+
     // 1. Ensure company exists or create
     let compId = lead.companyId;
     if (!compId) {
       const newComp: Company = {
         id: `comp-${Date.now()}`,
+        organizationId: activeOrgId,
         name: lead.company,
         taxId: "NIT-Pendiente",
         industry: lead.industry || "General",
@@ -612,6 +637,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 2. Ensure contact exists or create
     const newContact: Contact = {
       id: `cnt-${Date.now()}`,
+      organizationId: activeOrgId,
       name: lead.name,
       lastName: lead.lastName,
       email: lead.email,
@@ -634,6 +660,7 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const oppProb = oppData?.probability || 35;
     const newOpp: Opportunity = {
       id: `opp-${Date.now()}`,
+      organizationId: activeOrgId,
       title: oppData?.title || `Oportunidad Comercial - ${lead.company}`,
       companyId: compId,
       companyName: lead.company,
@@ -668,9 +695,13 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Company CRUD
   const addCompany = (comp: Omit<Company, "id" | "createdAt" | "contactsCount" | "opportunitiesCount">) => {
+    const activeOrgId = getActiveTenantId();
+    if (!activeOrgId) return;
+
     const newCompany: Company = {
       ...comp,
       id: `comp-${Date.now()}`,
+      organizationId: activeOrgId,
       contactsCount: 0,
       opportunitiesCount: 0,
       createdAt: new Date().toISOString(),
@@ -689,9 +720,13 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Contact CRUD
   const addContact = (cnt: Omit<Contact, "id" | "createdAt">) => {
+    const activeOrgId = getActiveTenantId();
+    if (!activeOrgId) return;
+
     const newContact: Contact = {
       ...cnt,
       id: `cnt-${Date.now()}`,
+      organizationId: activeOrgId,
       createdAt: new Date().toISOString(),
     };
     setContacts((prev) => [newContact, ...prev]);
@@ -708,10 +743,14 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Opportunity CRUD
   const addOpportunity = (opp: Omit<Opportunity, "id" | "createdAt" | "weightedValue">) => {
+    const activeOrgId = getActiveTenantId();
+    if (!activeOrgId) return;
+
     const weighted = opp.value * (opp.probability / 100);
     const newOpp: Opportunity = {
       ...opp,
       id: `opp-${Date.now()}`,
+      organizationId: activeOrgId,
       weightedValue: weighted,
       createdAt: new Date().toISOString(),
       lastActivityAt: new Date().toISOString(),
@@ -797,9 +836,13 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Task CRUD
   const addTask = (task: Omit<Task, "id" | "createdAt">) => {
+    const activeOrgId = getActiveTenantId();
+    if (!activeOrgId) return;
+
     const newTask: Task = {
       ...task,
       id: `tsk-${Date.now()}`,
+      organizationId: activeOrgId,
       createdAt: new Date().toISOString(),
     };
     setTasks((prev) => [newTask, ...prev]);
@@ -829,9 +872,13 @@ export const CRMProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Activities
   const addActivity = (activity: Omit<Activity, "id" | "timestamp">) => {
+    const activeOrgId = getActiveTenantId();
+    if (!activeOrgId) return;
+
     const newAct: Activity = {
       ...activity,
       id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      organizationId: activeOrgId,
       timestamp: new Date().toISOString(),
     };
     setActivities((prev) => [newAct, ...prev]);
