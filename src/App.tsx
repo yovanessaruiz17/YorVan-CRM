@@ -43,7 +43,7 @@ import { RolePermissionsModal } from "./components/layout/RolePermissionsModal";
 import { LoginView } from "./components/auth/LoginView";
 
 const CRMAppContent: React.FC = () => {
-  const { isAuthenticated, hasPermission } = useAuth();
+  const { isAuthenticated, currentUser, hasPermission } = useAuth();
   const [currentSection, setCurrentSection] = useState<NavSection>("dashboard");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -98,7 +98,7 @@ const CRMAppContent: React.FC = () => {
     }
   }, [currentSection, hasPermission, isAuthenticated]);
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !currentUser) {
     return <LoginView />;
   }
 

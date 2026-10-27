@@ -295,43 +295,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* User Footer Profile & Copyright */}
         <div className="p-3 border-t border-slate-800/80 bg-slate-950/40 space-y-2">
-          <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-800/50 border border-slate-700/50">
-            <img
-              src={currentUser.avatar}
-              alt={currentUser.name}
-              className="w-9 h-9 rounded-lg object-cover border border-slate-600 shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white truncate">
-                {currentUser.name} {currentUser.lastName}
-              </p>
-              <div className="mt-0.5">
-                <RoleBadge role={currentUser.role} />
+          {currentUser ? (
+            <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-800/50 border border-slate-700/50">
+              <img
+                src={currentUser.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150"}
+                alt={currentUser.name || "Usuario"}
+                className="w-9 h-9 rounded-lg object-cover border border-slate-600 shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white truncate">
+                  {currentUser.name} {currentUser.lastName}
+                </p>
+                <div className="mt-0.5">
+                  <RoleBadge role={currentUser.role} />
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-1 shrink-0">
-              {onOpenRolePermissions && (
+              <div className="flex items-center gap-1 shrink-0">
+                {onOpenRolePermissions && (
+                  <button
+                    type="button"
+                    onClick={onOpenRolePermissions}
+                    title="Ver permisos de mi rol"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-700/60 transition-colors"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                  </button>
+                )}
+
                 <button
                   type="button"
-                  onClick={onOpenRolePermissions}
-                  title="Ver permisos de mi rol"
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-700/60 transition-colors"
+                  onClick={logout}
+                  title="Cerrar sesión"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-700/60 transition-colors"
                 >
-                  <ShieldCheck className="w-4 h-4" />
+                  <LogOut className="w-4 h-4" />
                 </button>
-              )}
-
-              <button
-                type="button"
-                onClick={logout}
-                title="Cerrar sesión"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-700/60 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <div className="text-center pt-1">
             <a

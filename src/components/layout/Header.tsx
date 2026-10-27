@@ -159,23 +159,24 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         {/* Quick Role & User Switcher for testing RBAC */}
-        <div className="relative">
-          <button
-            onClick={() => setShowRoleSwitcher(!showRoleSwitcher)}
-            className="flex items-center gap-2 p-1.5 pl-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
-            title="Cambiar Usuario / Rol (Prueba de RBAC)"
-          >
-            <img
-              src={currentUser.avatar}
-              alt={currentUser.name}
-              className="w-6 h-6 rounded-md object-cover"
-            />
-            <div className="hidden xl:block text-left text-xs">
-              <span className="font-bold text-slate-800 block leading-tight">{currentUser.name}</span>
-            </div>
-            <RoleBadge role={currentUser.role} />
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-          </button>
+        {currentUser && (
+          <div className="relative">
+            <button
+              onClick={() => setShowRoleSwitcher(!showRoleSwitcher)}
+              className="flex items-center gap-2 p-1.5 pl-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
+              title="Cambiar Usuario / Rol (Prueba de RBAC)"
+            >
+              <img
+                src={currentUser.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150"}
+                alt={currentUser.name || "Usuario"}
+                className="w-6 h-6 rounded-md object-cover"
+              />
+              <div className="hidden xl:block text-left text-xs">
+                <span className="font-bold text-slate-800 block leading-tight">{currentUser.name}</span>
+              </div>
+              <RoleBadge role={currentUser.role} />
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            </button>
 
           {showRoleSwitcher && (
             <div
@@ -270,6 +271,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
         </div>
+      )}
       </div>
     </header>
   );

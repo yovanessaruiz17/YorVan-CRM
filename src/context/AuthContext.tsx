@@ -200,10 +200,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem("yorvar_crm_role_permissions", JSON.stringify(rolePermissions));
   }, [rolePermissions]);
 
-  // Determine active user safely without fallback to super admin if not authed
-  const currentUser: User | null = isAuthenticated && currentUserId
-    ? users.find((u) => u.id === currentUserId) || null
-    : null;
+  // Determine active user safely
+  const currentUser: User | null = React.useMemo(() => {
+    if (!isAuthenticated) return null;
+    if (currentUserId) {
+      const found = users.find((u) => u.id === currentUserId);
+      if (found) return found;
+    }
+    // If in demo mode and user list has members, fallback to first available active user
+    if (isDemoMode && users.length > 0) {
+      return users[0];
+    }
+    return null;
+  }, [isAuthenticated, currentUserId, users, isDemoMode]);
+
+  // Synchronize state and self-heal invalid sessions
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (!currentUser) {
+        // Invalid or orphaned session: reset to prevent infinite crash loop
+        setIsAuthenticated(false);
+        setCurrentUserId(null);
+        localStorage.removeItem("yorvar_crm_is_authenticated");
+        localStorage.removeItem("yorvar_crm_current_user_id");
+      } else if (currentUserId !== currentUser.id) {
+        setCurrentUserId(currentUser.id);
+      }
+    }
+  }, [isAuthenticated, currentUser, currentUserId]);
 
   const hasPermission = useCallback(
     (permissionId: string): boolean => {

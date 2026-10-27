@@ -25,6 +25,7 @@ export const RolePermissionsModal: React.FC<RolePermissionsModalProps> = ({
   onClose,
 }) => {
   const { currentUser, allPermissions, hasPermission } = useAuth();
+  if (!currentUser) return null;
   const roleMeta = ROLE_METADATA[currentUser.role] || ROLE_METADATA.super_admin;
 
   const categories = [

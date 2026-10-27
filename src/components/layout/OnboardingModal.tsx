@@ -180,7 +180,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               <div>
                 <h4 className="text-sm font-bold text-slate-900">Paso 2: Usuarios & Roles (RBAC)</h4>
                 <p className="text-xs text-slate-600">
-                  Tu usuario actual es <strong className="text-slate-800">{currentUser.name} {currentUser.lastName}</strong> ({currentUser.role}).
+                  Tu usuario actual es <strong className="text-slate-800">{currentUser?.name || "Usuario"} {currentUser?.lastName || ""}</strong> ({currentUser?.role || "super_admin"}).
                 </p>
               </div>
             </div>
